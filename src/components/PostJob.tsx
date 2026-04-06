@@ -36,7 +36,14 @@ export function PostJob() {
     const checkAuthAndLoadData = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       
-      if (!session || session.user.user_metadata?.role !== "employer") {
+      if (!session) {
+        toast.error("Please log in to post a job")
+        window.dispatchEvent(new CustomEvent('open-login'));
+        navigate("/")
+        return
+      }
+
+      if (session.user.user_metadata?.role !== "employer") {
         toast.error("Only employers can post jobs")
         navigate("/")
         return

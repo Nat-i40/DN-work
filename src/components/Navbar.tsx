@@ -115,7 +115,17 @@ export function Navbar() {
 
     fetchNavItems()
 
-    return () => subscription.unsubscribe()
+    const handleOpenLogin = () => setLoginOpen(true);
+    const handleOpenRegister = () => setRegisterOpen(true);
+    
+    window.addEventListener('open-login', handleOpenLogin);
+    window.addEventListener('open-register', handleOpenRegister);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('open-login', handleOpenLogin);
+      window.removeEventListener('open-register', handleOpenRegister);
+    }
   }, [])
 
   const fetchNavItems = async () => {
@@ -477,6 +487,19 @@ export function Navbar() {
                         </svg>
                         Google
                       </Button>
+                      <p className="text-center text-sm text-zinc-500 mt-4">
+                        Don't have an account?{" "}
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            setLoginOpen(false);
+                            setRegisterOpen(true);
+                          }}
+                          className="text-green-500 hover:underline font-medium"
+                        >
+                          Sign up
+                        </button>
+                      </p>
                     </form>
                   </DialogContent>
                 </Dialog>
@@ -655,6 +678,19 @@ export function Navbar() {
                       </svg>
                       Google
                     </Button>
+                    <p className="text-center text-sm text-zinc-500 mt-4">
+                      Already have an account?{" "}
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setRegisterOpen(false);
+                          setLoginOpen(true);
+                        }}
+                        className="text-green-500 hover:underline font-medium"
+                      >
+                        Log in
+                      </button>
+                    </p>
                   </DialogContent>
                 </Dialog>
               </div>

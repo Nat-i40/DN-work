@@ -93,6 +93,7 @@ export function JobDetails() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
       toast.error("Please log in to apply for this job.")
+      window.dispatchEvent(new CustomEvent('open-login'));
       return
     }
 
