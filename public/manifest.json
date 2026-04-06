@@ -1,0 +1,21 @@
+{
+  "name": "DN-Gigs",
+  "short_name": "DN-Gigs",
+  "description": "The fastest way to find jobs in Ethiopia.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#22c55e",
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/dngigs/192/192",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://picsum.photos/seed/dngigs/512/512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
