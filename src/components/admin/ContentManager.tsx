@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,19 +15,28 @@ export function ContentManager() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState({ key: "", title: "", content: "" })
 
+  const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)
+
+  // Update ref when state changes
   useEffect(() => {
-    fetchBlocks()
+    savingRef.current = saving
+  }, [saving])
+
+  useEffect(() => {
+    fetchBlocks(true)
     
     const subscription = supabase
       .channel('content_blocks_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'content_blocks' }, fetchBlocks)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'content_blocks' }, () => fetchBlocks(false))
       .subscribe()
 
     return () => { supabase.removeChannel(subscription) }
   }, [])
 
-  const fetchBlocks = async () => {
-    setLoading(true)
+  const fetchBlocks = async (isInitial = false, ignoreSaving = false) => {
+    if (!ignoreSaving && savingRef.current) return
+    if (isInitial) setLoading(true)
     const { data, error } = await supabase
       .from("content_blocks")
       .select("*")
@@ -38,11 +47,12 @@ export function ContentManager() {
     } else {
       setBlocks(data || [])
     }
-    setLoading(false)
+    if (isInitial) setLoading(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSaving(true)
     
     if (editingId) {
       const { error } = await supabase
@@ -63,7 +73,9 @@ export function ContentManager() {
     
     setFormData({ key: "", title: "", content: "" })
     setEditingId(null)
-    fetchBlocks()
+    setSaving(false)
+    savingRef.current = false
+    fetchBlocks(false, true)
   }
 
   const handleDelete = async (id: string) => {
@@ -89,6 +101,36 @@ export function ContentManager() {
       <div>
         <h1 className="text-3xl font-bold text-white mb-2">Content Manager</h1>
         <p className="text-zinc-400">Manage static text blocks across the site (e.g., About Us, Terms).</p>
+      </div>
+
+      <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">
+        <h2 className="text-xl font-semibold text-white mb-4">Common Editable Keys</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div className="space-y-1">
+            <p className="text-zinc-300 font-mono">feature_1_title</p>
+            <p className="text-zinc-500">First feature heading</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-zinc-300 font-mono">feature_1_content</p>
+            <p className="text-zinc-500">First feature description</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-zinc-300 font-mono">feature_2_title</p>
+            <p className="text-zinc-500">Second feature heading</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-zinc-300 font-mono">feature_2_content</p>
+            <p className="text-zinc-500">Second feature description</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-zinc-300 font-mono">feature_3_title</p>
+            <p className="text-zinc-500">Third feature heading</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-zinc-300 font-mono">feature_3_content</p>
+            <p className="text-zinc-500">Third feature description</p>
+          </div>
+        </div>
       </div>
 
       <div className="bg-zinc-900 border border-white/10 rounded-xl p-6">

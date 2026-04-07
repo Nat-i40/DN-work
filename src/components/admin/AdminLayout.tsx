@@ -26,13 +26,29 @@ export function AdminLayout() {
   })
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session || (session.user.user_metadata?.role !== "admin" && session.user.email !== "natifreak0@gmail.com")) {
-        navigate("/")
-      } else {
-        setLoading(false)
+    const checkSession = async () => {
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Admin session check timed out')), 5000)
+      );
+
+      try {
+        const { data: { session } } = await Promise.race([
+          supabase.auth.getSession(),
+          timeoutPromise as Promise<any>
+        ]);
+
+        if (!session || (session.user.user_metadata?.role !== "admin" && session.user.email !== "natifreak0@gmail.com")) {
+          navigate("/")
+        } else {
+          setLoading(false)
+        }
+      } catch (err) {
+        console.error('Admin session check failed or timed out:', err);
+        navigate("/"); // Redirect to home on failure
       }
-    })
+    };
+
+    checkSession();
   }, [navigate])
 
   useEffect(() => {
@@ -49,8 +65,19 @@ export function AdminLayout() {
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    navigate("/")
+    try {
+      await supabase.auth.signOut()
+      
+      // Manual cleanup as a fallback
+      const projectId = 'qilcijfxtgssleccvmzy'
+      localStorage.removeItem(`sb-${projectId}-auth-token`)
+      sessionStorage.clear()
+      
+      window.location.href = '/'
+    } catch (err) {
+      console.error('Logout error:', err)
+      window.location.href = '/'
+    }
   }
 
   if (loading) {

@@ -59,6 +59,7 @@ export function Navbar() {
   const [loginOpen, setLoginOpen] = useState(false)
   const [navItems, setNavItems] = useState<any[]>([])
   const [siteName, setSiteName] = useState("DN-Gigs")
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const [seekerName, setSeekerName] = useState("")
@@ -82,6 +83,26 @@ export function Navbar() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
     })
+
+    const fetchSettings = async () => {
+      const { data } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "global_settings")
+        .single()
+      
+      if (data?.value) {
+        setSiteName(data.value.site_name || "DN-Gigs")
+        setLogoUrl(data.value.logo_url || null)
+      }
+    }
+
+    fetchSettings()
+
+    const settingsSubscription = supabase
+      .channel('site_settings_navbar')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings', filter: "key=eq.global_settings" }, fetchSettings)
+      .subscribe()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null)
@@ -123,6 +144,7 @@ export function Navbar() {
 
     return () => {
       subscription.unsubscribe();
+      supabase.removeChannel(settingsSubscription);
       window.removeEventListener('open-login', handleOpenLogin);
       window.removeEventListener('open-register', handleOpenRegister);
     }
@@ -143,12 +165,25 @@ export function Navbar() {
   }
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      toast.error(error.message)
-    } else {
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('Logout error:', error)
+        toast.error(error.message)
+      }
+      
+      // Manual cleanup as a fallback
+      const projectId = 'qilcijfxtgssleccvmzy'
+      localStorage.removeItem(`sb-${projectId}-auth-token`)
+      sessionStorage.clear()
+      
       toast.success("Logged out successfully")
-      navigate("/")
+      
+      // Use window.location.href to force a full reload and clear any stale state
+      window.location.href = '/'
+    } catch (err) {
+      console.error('Unexpected logout error:', err)
+      window.location.href = '/'
     }
   }
 
@@ -328,8 +363,12 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 cursor-pointer group">
-            <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-              <Briefcase className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform overflow-hidden">
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                <Briefcase className="w-4 h-4 text-white" />
+              )}
             </div>
             <span className="text-xl font-bold tracking-tight text-white">
               {siteName.split('-')[0]}<span className="text-green-400">{siteName.split('-')[1] ? `-${siteName.split('-')[1]}` : ''}</span>

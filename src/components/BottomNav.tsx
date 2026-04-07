@@ -32,8 +32,6 @@ export function BottomNav() {
     return () => subscription.unsubscribe();
   }, []);
 
-  if (!session) return null;
-
   const getLinks = () => {
     if (role === 'admin') {
       return [
@@ -66,6 +64,16 @@ export function BottomNav() {
       { name: 'Settings', path: '/settings', icon: Settings },
     ];
   };
+
+  if (!session) {
+    return (
+      <footer className="fixed bottom-0 left-0 right-0 z-50 py-6 bg-zinc-950/80 backdrop-blur-xl border-t border-zinc-800/50 text-center">
+        <p className="text-zinc-500 text-sm font-medium tracking-wide">
+          All rights reserved © {new Date().getFullYear()} DN Corporation
+        </p>
+      </footer>
+    );
+  }
 
   const links = getLinks();
 
