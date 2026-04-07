@@ -87,72 +87,100 @@ export function PostJob() {
     e.preventDefault()
     setLoading(true)
 
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return
-
-    const expirationDate = new Date()
-    expirationDate.setDate(expirationDate.getDate() + parseInt(formData.expires_in_days || "30"))
-
-    const { data: jobData, error } = await supabase.from("jobs").insert([{
-      title: formData.title,
-      company_name: formData.company_name,
-      category_id: formData.category_id || null,
-      is_verified: false,
-      featured: false
-    }]).select().single()
-
-    if (error) {
-      toast.error("Failed to post job: " + error.message)
-    } else if (jobData) {
-      // Update user role to employer and mark as verified
-      const currentMetadata = session.user.user_metadata || {};
-      await supabase.auth.updateUser({
-        data: {
-          ...currentMetadata,
-          role: 'employer',
-          is_verified: true
-        }
-      });
-
-      // Update user profile in content_blocks
-      const { data: profileData } = await supabase
-        .from('content_blocks')
-        .select('*')
-        .eq('key', `user_profile_${session.user.id}`)
-        .single();
-      
-      if (profileData) {
-        const content = JSON.parse(profileData.content);
-        content.role = 'employer';
-        content.is_verified = true;
-        await supabase.from('content_blocks').update({
-          content: JSON.stringify(content)
-        }).eq('id', profileData.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        toast.error("You must be logged in to post a job")
+        setLoading(false)
+        return
       }
 
-      // Store extra details in content_blocks
-      await supabase.from("content_blocks").insert([{
-        key: `job_details_${jobData.id}`,
-        title: "Job Details",
-        content: JSON.stringify({
-          location: formData.location,
-          salary_range: formData.salary_range,
-          job_type: formData.job_type,
-          experience: formData.experience,
-          urgency: formData.urgency,
-          description: formData.description,
-          requirements: formData.requirements,
-          image_url: formData.image_url,
-          posted_by: session.user.id,
-          email: session.user.email
-        })
-      }])
+      const expirationDate = new Date()
+      expirationDate.setDate(expirationDate.getDate() + parseInt(formData.expires_in_days || "30"))
 
-      toast.success("Job posted successfully! It will be visible once verified by an admin.")
-      navigate("/search")
+      const { data: jobData, error } = await supabase.from("jobs").insert([{
+        title: formData.title,
+        company_name: formData.company_name,
+        category_id: formData.category_id || null,
+        is_verified: false,
+        featured: false,
+        expires_at: expirationDate.toISOString()
+      }]).select().single()
+
+      if (error) {
+        console.error("Error creating job:", error)
+        toast.error("Failed to post job: " + error.message)
+        setLoading(false)
+        return
+      }
+
+      if (jobData) {
+        // Update user role to employer and mark as verified
+        try {
+          const currentMetadata = session.user.user_metadata || {};
+          await supabase.auth.updateUser({
+            data: {
+              ...currentMetadata,
+              role: 'employer',
+              is_verified: true
+            }
+          });
+        } catch (authError) {
+          console.error("Error updating user metadata:", authError)
+        }
+
+        // Update user profile in content_blocks
+        try {
+          const { data: profileData } = await supabase
+            .from('content_blocks')
+            .select('*')
+            .eq('key', `user_profile_${session.user.id}`)
+            .single();
+          
+          if (profileData) {
+            const content = JSON.parse(profileData.content);
+            content.role = 'employer';
+            content.is_verified = true;
+            await supabase.from('content_blocks').update({
+              content: JSON.stringify(content)
+            }).eq('id', profileData.id);
+          }
+        } catch (profileError) {
+          console.error("Error updating user profile block:", profileError)
+        }
+
+        // Store extra details in content_blocks
+        try {
+          const { error: detailsError } = await supabase.from("content_blocks").insert([{
+            key: `job_details_${jobData.id}`,
+            title: "Job Details",
+            content: JSON.stringify({
+              location: formData.location,
+              salary_range: formData.salary_range,
+              job_type: formData.job_type,
+              experience: formData.experience,
+              urgency: formData.urgency,
+              description: formData.description,
+              requirements: formData.requirements,
+              image_url: formData.image_url,
+              posted_by: session.user.id,
+              email: session.user.email
+            })
+          }])
+          if (detailsError) console.error("Error inserting job details block:", detailsError)
+        } catch (detailsError) {
+          console.error("Unexpected error inserting job details block:", detailsError)
+        }
+
+        toast.success("Job posted successfully! It will be visible once verified by an admin.")
+        navigate("/search")
+      }
+    } catch (err) {
+      console.error("Unexpected error in handleSubmit:", err)
+      toast.error("An unexpected error occurred. Please try again.")
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   const filteredCategories = categories.filter(c => 

@@ -44,7 +44,7 @@ export function NavManager() {
   const saveItems = async (newItems: any[]) => {
     const { error } = await supabase
       .from("site_settings")
-      .upsert({ key: "navbar", value: newItems })
+      .upsert({ key: "navbar", value: newItems }, { onConflict: 'key' })
 
     if (error) toast.error("Failed to save changes")
     else toast.success("Saved successfully")

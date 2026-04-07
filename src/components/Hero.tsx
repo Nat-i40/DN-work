@@ -30,6 +30,13 @@ export function Hero() {
       if (heroRes.data?.value) setHeroContent(heroRes.data.value)
     }
     fetchData()
+
+    const subscription = supabase
+      .channel('site_settings_hero')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings', filter: "key=eq.hero_content" }, fetchData)
+      .subscribe()
+
+    return () => { supabase.removeChannel(subscription) }
   }, [])
 
   const handleSearch = (e: React.FormEvent) => {

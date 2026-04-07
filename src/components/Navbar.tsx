@@ -97,11 +97,25 @@ export function Navbar() {
       }
     }
 
+    const fetchNavItems = async () => {
+      const { data } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "navbar")
+        .single()
+      
+      if (data?.value) {
+        setNavItems(data.value)
+      }
+    }
+
     fetchSettings()
+    fetchNavItems()
 
     const settingsSubscription = supabase
       .channel('site_settings_navbar')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings', filter: "key=eq.global_settings" }, fetchSettings)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings', filter: "key=eq.navbar" }, fetchNavItems)
       .subscribe()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {

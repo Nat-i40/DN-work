@@ -51,7 +51,7 @@ export function HeroManager() {
     
     const { error } = await supabase
       .from("site_settings")
-      .upsert({ key: "hero_content", value: formData })
+      .upsert({ key: "hero_content", value: formData }, { onConflict: 'key' })
 
     if (error) {
       toast.error("Failed to save changes")

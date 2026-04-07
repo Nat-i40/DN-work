@@ -16,3 +16,22 @@ UPDATE jobs SET expires_at = now() + interval '30 days' WHERE expires_at IS NULL
 
 -- 5. Add is_verified to users table for employer verification
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT false;
+
+-- 6. Create site_settings table if it doesn't exist
+CREATE TABLE IF NOT EXISTS site_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key TEXT UNIQUE NOT NULL,
+  value JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- 7. Create content_blocks table if it doesn't exist
+CREATE TABLE IF NOT EXISTS content_blocks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key TEXT UNIQUE NOT NULL,
+  title TEXT,
+  content TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);

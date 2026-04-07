@@ -39,18 +39,25 @@ export function SettingsManager() {
   const fetchSettings = async (isInitial = false, ignoreSaving = false) => {
     if (!ignoreSaving && savingRef.current) return
     if (isInitial) setLoading(true)
-    const { data, error } = await supabase
-      .from("site_settings")
-      .select("value")
-      .eq("key", "global_settings")
-      .single()
+    
+    try {
+      const { data, error } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "global_settings")
+        .single()
 
-    if (error && error.code !== "PGRST116") {
-      toast.error("Failed to load settings")
-    } else if (data?.value) {
-      setFormData(data.value)
+      if (error && error.code !== "PGRST116") {
+        console.error("Error loading settings:", error)
+        toast.error("Failed to load settings")
+      } else if (data?.value) {
+        setFormData(data.value)
+      }
+    } catch (err) {
+      console.error("Unexpected error loading settings:", err)
+    } finally {
+      if (isInitial) setLoading(false)
     }
-    if (isInitial) setLoading(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,7 +66,7 @@ export function SettingsManager() {
     
     const { error } = await supabase
       .from("site_settings")
-      .upsert({ key: "global_settings", value: formData })
+      .upsert({ key: "global_settings", value: formData }, { onConflict: 'key' })
 
     if (error) {
       toast.error("Failed to save changes")
